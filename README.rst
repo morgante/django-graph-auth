@@ -7,6 +7,8 @@ django-graph-auth is a Django application which provides simple mutations and qu
 
 .. _JSON web tokens: http://getblimp.github.io/django-rest-framework-jwt/
 
+Documentation can be found on (`GitHub<https://github.com/morgante/django-graph-auth/blob/master/docs/api.md>`_).
+
 Requirements
 ------------
 
