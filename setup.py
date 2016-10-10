@@ -17,7 +17,7 @@ setup(
     url='https://github.com/morgante/django-graph-auth',
     packages=['graph_auth'],
     license='MIT License',
-    keywords='django middleware graphql api authentication jwt',
+    keywords='django graphql api authentication jwt',
     platforms=['any'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
