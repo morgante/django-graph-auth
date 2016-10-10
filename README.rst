@@ -3,11 +3,13 @@ django-graph-auth
 
 django-graph-auth is a Django application which provides simple mutations and queries for managing users with GraphQL. It can register users, log in, reset users, and expose `JSON web tokens`_.
 
+Documentation can be found on `GitHub`_.
+
 .. _Django Rest Framework: http://www.django-rest-framework.org/
 
 .. _JSON web tokens: http://getblimp.github.io/django-rest-framework-jwt/
 
-Documentation can be found on (`GitHub<https://github.com/morgante/django-graph-auth/blob/master/docs/api.md>`_).
+.. _GitHub: https://github.com/morgante/django-graph-auth/blob/master/docs/api.md
 
 Requirements
 ------------
@@ -42,4 +44,6 @@ Credits
 -------
 
 ``django-graph-auth`` was created by Morgante Pell (`@morgante
-<https://github.com/morgante>`_). It is based on (`django-rest-auth<https://github.com/Tivix/django-rest-auth>`_).
+<https://github.com/morgante>`_). It is based on `django-rest-auth`_.
+
+.. _django-rest-auth: https://github.com/Tivix/django-rest-auth
