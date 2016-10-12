@@ -13,11 +13,13 @@ from rest_framework_jwt.settings import api_settings
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.encoding import force_text
 
+from graph_auth.settings import graph_auth_settings
+
 class UserNode(DjangoObjectType):
     class Meta:
         model = django.contrib.auth.get_user_model()
         interfaces = (Node, )
-        only_fields = ('email', 'first_name', 'last_name', )
+        only_fields = graph_auth_settings.USER_FIELDS
 
     @classmethod
     def get_node(cls, id, context, info):
