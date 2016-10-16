@@ -154,6 +154,48 @@ class ResetPassword(relay.ClientIDMutation):
 
         return ResetPassword(ok=True, user=user)
 
+class UpdateUser(relay.ClientIDMutation):
+    class Input:
+        username = graphene.String()
+        email = graphene.String()
+        password = graphene.String()
+        current_password = graphene.String()
+        first_name = graphene.String()
+        last_name = graphene.String()
+
+    ok = graphene.Boolean()
+    result = graphene.Field(UserNode)
+
+    @classmethod
+    def mutate_and_get_payload(cls, input, context, info):
+        Model = django.contrib.auth.get_user_model()
+        user = context.user
+        user.is_current_user = True
+
+        if not user.is_authenticated:
+            raise Exception("You must be logged in to update renter profiles.")
+
+        if 'password' in input:
+            try:
+                current_password = input.pop('current_password')
+            except KeyError:
+                raise Exception("Please provide your current password to change your password.")
+
+            if user.check_password(current_password):
+                user.set_password(input.pop('password'))
+            else:
+                raise Exception("Current password is incorrect.")
+
+        for key, value in input.items():
+            if not key is 'current_password':
+                setattr(user, key, value)
+
+        user.save()
+
+        updated_user = Model.objects.get(pk=user.pk)
+
+        return UpdateUser(ok=True, result=updated_user)
+
 class Query(AbstractType):
     user = graphene.Field(UserNode)
     users = DjangoFilterConnectionField(UserNode)
@@ -167,3 +209,4 @@ class Mutation(AbstractType):
     login_user = LoginUser.Field()
     reset_password_request = ResetPasswordRequest.Field()
     reset_password = ResetPassword.Field()
+    update_user = UpdateUser.Field()

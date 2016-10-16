@@ -97,3 +97,28 @@ mutation {
   }
 }
 ```
+
+
+### Update User
+Logged in users can update themselves.
+
+Please note that the user needs to provide their current password to change their password.
+Changing the password may reset a user's session.
+```
+mutation {
+  updateUser(input: {
+    email: "new@mastermade.co"
+    firstName: "newFirst",
+    lastName: "newLast",
+    username: "newname"
+    password: "excellent_password"
+  }) {
+    ok
+    result {
+      email
+      firstName
+      lastName
+    }
+  }
+}
+```
