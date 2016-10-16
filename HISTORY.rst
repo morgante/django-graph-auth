@@ -6,7 +6,7 @@ Pending
 
 * New release notes go here.
 
-0.2.0 (2016-10-16)
+0.3.0 (2016-10-16)
 -----------------
 
 * Add user changing functionality.
