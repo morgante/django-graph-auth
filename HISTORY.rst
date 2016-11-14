@@ -6,6 +6,11 @@ Pending
 
 * New release notes go here.
 
+0.3.1 (2016-11-13)
+-----------------
+
+* Add installation dependencies. (https://github.com/morgante/django-graph-auth/pull/2)
+
 0.3.0 (2016-10-16)
 -----------------
 
