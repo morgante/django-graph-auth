@@ -37,5 +37,5 @@ setup(
         'Topic :: Software Development :: Libraries :: Application Frameworks',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    install_requires=[],
+    install_requires=['djangorestframework','djangorestframework-jwt'],
 )
