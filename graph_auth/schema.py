@@ -74,7 +74,9 @@ class RegisterUser(relay.ClientIDMutation):
         user.is_current_user = True
 
         if graph_auth_settings.WELCOME_EMAIL_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None:
-            message = EmailMessage(graph_auth_settings.WELCOME_EMAIL_TEMPLATE, user.__dict__, graph_auth_settings.EMAIL_FROM, [user.email])
+            input_data = user.__dict__
+            input_data['password'] = password
+            message = EmailMessage(graph_auth_settings.WELCOME_EMAIL_TEMPLATE, input_data, graph_auth_settings.EMAIL_FROM, [user.email])
             message.send()
 
         return RegisterUser(ok=True, user=user)
