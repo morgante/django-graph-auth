@@ -37,5 +37,5 @@ setup(
         'Topic :: Software Development :: Libraries :: Application Frameworks',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
-    install_requires=['djangorestframework','djangorestframework-jwt'],
+    install_requires=['djangorestframework','djangorestframework-jwt', 'django-mail-templated'],
 )

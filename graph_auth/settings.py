@@ -24,7 +24,9 @@ except ImportError:
 
 DEFAULTS = {
     'USER_FIELDS': ('email', 'first_name', 'last_name', ),
-    'ONLY_ADMIN_REGISTRATION': False
+    'ONLY_ADMIN_REGISTRATION': False,
+    'WELCOME_EMAIL_TEMPLATE': None,
+    'EMAIL_FROM': None
 }
 
 # List of settings that may be in string import notation.

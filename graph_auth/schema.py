@@ -11,6 +11,7 @@ import django.contrib.auth
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.encoding import force_text
+from mail_templated import EmailMessage
 
 from rest_framework_jwt.settings import api_settings
 from graph_auth.settings import graph_auth_settings
@@ -71,6 +72,10 @@ class RegisterUser(relay.ClientIDMutation):
 
         user = model.objects.create_user(username, email, password, **input)
         user.is_current_user = True
+
+        if graph_auth_settings.WELCOME_EMAIL_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None:
+            message = EmailMessage(graph_auth_settings.WELCOME_EMAIL_TEMPLATE, user.__dict__, graph_auth_settings.EMAIL_FROM, [user.email])
+            message.send()
 
         return RegisterUser(ok=True, user=user)
 
