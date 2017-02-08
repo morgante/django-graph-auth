@@ -9,22 +9,29 @@ import logging
 from django.db import models
 import django.contrib.auth
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
-from rest_framework_jwt.settings import api_settings
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.encoding import force_text
 
+from rest_framework_jwt.settings import api_settings
 from graph_auth.settings import graph_auth_settings
+
+UserModel = django.contrib.auth.get_user_model()
+
+class DynamicUsernameMeta(type):
+    def __new__(mcs, classname, bases, dictionary):
+        dictionary[UserModel.USERNAME_FIELD] = graphene.String(required=True)
+        return type.__new__(mcs, classname, bases, dictionary)
 
 class UserNode(DjangoObjectType):
     class Meta:
-        model = django.contrib.auth.get_user_model()
+        model = UserModel
         interfaces = (Node, )
         only_fields = graph_auth_settings.USER_FIELDS
 
     @classmethod
     def get_node(cls, id, context, info):
         user = super(UserNode, cls).get_node(id, context, info)
-        if context.user.id and user.id == context.user.id:
+        if context.user.id and (user.id == context.user.id or context.user.is_staff):
             return user
         else:
             return None
@@ -43,8 +50,7 @@ class UserNode(DjangoObjectType):
         return token
 
 class RegisterUser(relay.ClientIDMutation):
-    class Input:
-        username = graphene.String()
+    class Input(metaclass=DynamicUsernameMeta):
         email = graphene.String(required=True)
         password = graphene.String(required=True)
         first_name = graphene.String()
@@ -55,10 +61,12 @@ class RegisterUser(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        model = django.contrib.auth.get_user_model()
+        model = UserModel
+        if graph_auth_settings.ONLY_ADMIN_REGISTRATION and not (context.user.id and context.user.is_staff):
+            return RegisterUser(ok=False, user=None)
 
         email = input.pop('email')
-        username = input.pop('username', email)
+        username = input.pop(UserModel.USERNAME_FIELD, email)
         password = input.pop('password')
 
         user = model.objects.create_user(username, email, password, **input)
@@ -67,9 +75,7 @@ class RegisterUser(relay.ClientIDMutation):
         return RegisterUser(ok=True, user=user)
 
 class LoginUser(relay.ClientIDMutation):
-    class Input:
-        username = graphene.String()
-        email = graphene.String(required=True)
+    class Input(metaclass=DynamicUsernameMeta):
         password = graphene.String(required=True)
 
     ok = graphene.Boolean()
@@ -77,10 +83,10 @@ class LoginUser(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        model = django.contrib.auth.get_user_model()
+        model = UserModel
 
         params = {
-            model.USERNAME_FIELD: input.get(model.USERNAME_FIELD, input.get('email')),
+            model.USERNAME_FIELD: input.get(model.USERNAME_FIELD, ''),
             'password': input.get('password')
         }
 
@@ -130,7 +136,7 @@ class ResetPassword(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        Model = django.contrib.auth.get_user_model()
+        Model = UserModel
 
         try:
             uid = force_text(uid_decoder(input.get('id')))
@@ -154,21 +160,23 @@ class ResetPassword(relay.ClientIDMutation):
 
         return ResetPassword(ok=True, user=user)
 
+class UpdateUsernameMeta(type):
+    def __new__(mcs, classname, bases, dictionary):
+        for field in graph_auth_settings.USER_FIELDS:
+            dictionary[field] = graphene.String()
+        return type.__new__(mcs, classname, bases, dictionary)
+
 class UpdateUser(relay.ClientIDMutation):
-    class Input:
-        username = graphene.String()
-        email = graphene.String()
+    class Input(metaclass=UpdateUsernameMeta):
         password = graphene.String()
         current_password = graphene.String()
-        first_name = graphene.String()
-        last_name = graphene.String()
 
     ok = graphene.Boolean()
     result = graphene.Field(UserNode)
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        Model = django.contrib.auth.get_user_model()
+        Model = UserModel
         user = context.user
         user.is_current_user = True
 
