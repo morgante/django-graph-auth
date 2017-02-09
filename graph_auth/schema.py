@@ -65,7 +65,8 @@ class RegisterUser(relay.ClientIDMutation):
         model = UserModel
         if graph_auth_settings.ONLY_ADMIN_REGISTRATION and not (context.user.id and context.user.is_staff):
             return RegisterUser(ok=False, user=None)
-        input.pop('clientMutationId')
+        if 'clientMutationId' in input:
+            input.pop('clientMutationId')
         email = input.pop('email')
         username = input.pop(UserModel.USERNAME_FIELD, email)
         password = input.pop('password') if 'password' in input else model.objects.make_random_password()
