@@ -53,7 +53,7 @@ class UserNode(DjangoObjectType):
 class RegisterUser(relay.ClientIDMutation):
     class Input(metaclass=DynamicUsernameMeta):
         email = graphene.String(required=True)
-        password = graphene.String(required=True)
+        password = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
 
@@ -68,7 +68,7 @@ class RegisterUser(relay.ClientIDMutation):
         input.pop('clientMutationId')
         email = input.pop('email')
         username = input.pop(UserModel.USERNAME_FIELD, email)
-        password = input.pop('password')
+        password = input.pop('password') if 'password' in input else model.objects.make_random_password()
 
         user = model.objects.create_user(username, email, password, **input)
         user.is_current_user = True
