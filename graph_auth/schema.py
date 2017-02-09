@@ -25,8 +25,9 @@ class DynamicUsernameMeta(type):
 class UserNode(DjangoObjectType):
     class Meta:
         model = UserModel
-        interfaces = (Node, )
+        interfaces = (relay.Node, )
         only_fields = graph_auth_settings.USER_FIELDS
+        filter_fields = graph_auth_settings.USER_FIELDS
 
     @classmethod
     def get_node(cls, id, context, info):
@@ -212,7 +213,7 @@ class UpdateUser(relay.ClientIDMutation):
         return UpdateUser(ok=True, result=updated_user)
 
 class Query(AbstractType):
-    user = graphene.Field(UserNode)
+    user = relay.Node.Field(UserNode)
     users = DjangoFilterConnectionField(UserNode)
 
     me = graphene.Field(UserNode)
