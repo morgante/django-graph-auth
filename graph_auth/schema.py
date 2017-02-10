@@ -7,13 +7,17 @@ from graphene_django import DjangoObjectType
 import django_filters
 import logging
 from django.db import models
-import django.contrib.auth
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.encoding import force_text
 
 from rest_framework_jwt.settings import api_settings
 from graph_auth.settings import graph_auth_settings
+
+import django.contrib.auth
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 UserModel = django.contrib.auth.get_user_model()
 
@@ -115,22 +119,39 @@ class ResetPasswordRequest(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        data = {
-            'email': input.get('email'),
-        }
+        if graph_auth.settings.CUSTOM_PASSWORD_RESET_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None:
 
-        reset_form = PasswordResetForm(data=data)
+            from mail_templated import EmailMessage
 
-        if not reset_form.is_valid():
-            raise Exception("The email is not valid")
+            for user in UserModel.objects.filter(email=input.get('email')):
+                uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+                token = token_generator.make_token(user)
+                input_data = {
+                    "email": user.email, 
+                    "first_name": user.first_name, 
+                    "last_name": user.last_name, 
+                    "token": token, 
+                    "uid": uid}
+                message = EmailMessage(graph_auth_settings.CUSTOM_PASSWORD_RESET_TEMPLATE, input_data, graph_auth_settings.EMAIL_FROM, [user.email])
+                message.send()
 
-        options = {
-            'use_https': context.is_secure(),
-            'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
-            'request': context
-        }
+        else:
+            data = {
+                'email': input.get('email'),
+            }
 
-        reset_form.save(**options)
+            reset_form = PasswordResetForm(data=data)
+
+            if not reset_form.is_valid():
+                raise Exception("The email is not valid")
+
+            options = {
+                'use_https': context.is_secure(),
+                'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
+                'request': context
+            }
+
+            reset_form.save(**options)
 
         return ResetPasswordRequest(ok=True)
 
