@@ -15,7 +15,7 @@ from graph_auth.settings import graph_auth_settings
 
 import django.contrib.auth
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
-from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth.tokens import default_token_generator as token_generator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
