@@ -119,19 +119,22 @@ class ResetPasswordRequest(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        if graph_auth.settings.CUSTOM_PASSWORD_RESET_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None:
+        if graph_auth.settings.CUSTOM_PASSWORD_RESET_TEMPLATE is not None 
+            and graph_auth_settings.EMAIL_FROM is not None 
+            and graph_auth_settings.PASSWORD_RESET_URL_TEMPLATE is not None:
 
             from mail_templated import EmailMessage
 
             for user in UserModel.objects.filter(email=input.get('email')):
                 uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
                 token = token_generator.make_token(user)
+                link = graph_auth_settings.PASSWORD_RESET_URL_TEMPLATE.format(token=token, uid=uid)
                 input_data = {
                     "email": user.email, 
                     "first_name": user.first_name, 
                     "last_name": user.last_name, 
-                    "token": token, 
-                    "uid": uid}
+                    "link": link
+                    }
                 message = EmailMessage(graph_auth_settings.CUSTOM_PASSWORD_RESET_TEMPLATE, input_data, graph_auth_settings.EMAIL_FROM, [user.email])
                 message.send()
 
