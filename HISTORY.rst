@@ -3,8 +3,13 @@ History
 
 Pending
 -------
-
 * New release notes go here.
+
+0.3.2 (2017-2-8)
+-----------------
+* Added admin only registration option
+* Added welcome email options
+* Improved dynamic username fields.
 
 0.3.1 (2016-11-13)
 -----------------

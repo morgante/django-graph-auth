@@ -7,24 +7,36 @@ from graphene_django import DjangoObjectType
 import django_filters
 import logging
 from django.db import models
-import django.contrib.auth
-from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
-from rest_framework_jwt.settings import api_settings
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.encoding import force_text
 
+from rest_framework_jwt.settings import api_settings
 from graph_auth.settings import graph_auth_settings
+
+import django.contrib.auth
+from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator as token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+
+UserModel = django.contrib.auth.get_user_model()
+
+class DynamicUsernameMeta(type):
+    def __new__(mcs, classname, bases, dictionary):
+        dictionary[UserModel.USERNAME_FIELD] = graphene.String(required=True)
+        return type.__new__(mcs, classname, bases, dictionary)
 
 class UserNode(DjangoObjectType):
     class Meta:
-        model = django.contrib.auth.get_user_model()
-        interfaces = (Node, )
+        model = UserModel
+        interfaces = (relay.Node, )
         only_fields = graph_auth_settings.USER_FIELDS
+        filter_fields = graph_auth_settings.USER_FIELDS
 
     @classmethod
     def get_node(cls, id, context, info):
         user = super(UserNode, cls).get_node(id, context, info)
-        if context.user.id and user.id == context.user.id:
+        if context.user.id and (user.id == context.user.id or context.user.is_staff):
             return user
         else:
             return None
@@ -43,10 +55,9 @@ class UserNode(DjangoObjectType):
         return token
 
 class RegisterUser(relay.ClientIDMutation):
-    class Input:
-        username = graphene.String()
+    class Input(metaclass=DynamicUsernameMeta):
         email = graphene.String(required=True)
-        password = graphene.String(required=True)
+        password = graphene.String()
         first_name = graphene.String()
         last_name = graphene.String()
 
@@ -55,21 +66,29 @@ class RegisterUser(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        model = django.contrib.auth.get_user_model()
-
+        model = UserModel
+        if graph_auth_settings.ONLY_ADMIN_REGISTRATION and not (context.user.id and context.user.is_staff):
+            return RegisterUser(ok=False, user=None)
+        if 'clientMutationId' in input:
+            input.pop('clientMutationId')
         email = input.pop('email')
-        username = input.pop('username', email)
-        password = input.pop('password')
+        username = input.pop(UserModel.USERNAME_FIELD, email)
+        password = input.pop('password') if 'password' in input else model.objects.make_random_password()
 
         user = model.objects.create_user(username, email, password, **input)
         user.is_current_user = True
 
+        if graph_auth_settings.WELCOME_EMAIL_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None:
+            from mail_templated import EmailMessage
+            input_data = user.__dict__
+            input_data['password'] = password
+            message = EmailMessage(graph_auth_settings.WELCOME_EMAIL_TEMPLATE, input_data, graph_auth_settings.EMAIL_FROM, [user.email])
+            message.send()
+
         return RegisterUser(ok=True, user=user)
 
 class LoginUser(relay.ClientIDMutation):
-    class Input:
-        username = graphene.String()
-        email = graphene.String(required=True)
+    class Input(metaclass=DynamicUsernameMeta):
         password = graphene.String(required=True)
 
     ok = graphene.Boolean()
@@ -77,10 +96,10 @@ class LoginUser(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        model = django.contrib.auth.get_user_model()
+        model = UserModel
 
         params = {
-            model.USERNAME_FIELD: input.get(model.USERNAME_FIELD, input.get('email')),
+            model.USERNAME_FIELD: input.get(model.USERNAME_FIELD, ''),
             'password': input.get('password')
         }
 
@@ -100,22 +119,40 @@ class ResetPasswordRequest(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        data = {
-            'email': input.get('email'),
-        }
+        if graph_auth_settings.CUSTOM_PASSWORD_RESET_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None and graph_auth_settings.PASSWORD_RESET_URL_TEMPLATE is not None:
 
-        reset_form = PasswordResetForm(data=data)
+            from mail_templated import EmailMessage
 
-        if not reset_form.is_valid():
-            raise Exception("The email is not valid")
+            for user in UserModel.objects.filter(email=input.get('email')):
+                uid = urlsafe_base64_encode(force_bytes(user.pk)).decode()
+                token = token_generator.make_token(user)
+                link = graph_auth_settings.PASSWORD_RESET_URL_TEMPLATE.format(token=token, uid=uid)
+                input_data = {
+                    "email": user.email, 
+                    "first_name": user.first_name, 
+                    "last_name": user.last_name, 
+                    "link": link
+                    }
+                message = EmailMessage(graph_auth_settings.CUSTOM_PASSWORD_RESET_TEMPLATE, input_data, graph_auth_settings.EMAIL_FROM, [user.email])
+                message.send()
 
-        options = {
-            'use_https': context.is_secure(),
-            'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
-            'request': context
-        }
+        else:
+            data = {
+                'email': input.get('email'),
+            }
 
-        reset_form.save(**options)
+            reset_form = PasswordResetForm(data=data)
+
+            if not reset_form.is_valid():
+                raise Exception("The email is not valid")
+
+            options = {
+                'use_https': context.is_secure(),
+                'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL'),
+                'request': context
+            }
+
+            reset_form.save(**options)
 
         return ResetPasswordRequest(ok=True)
 
@@ -130,7 +167,7 @@ class ResetPassword(relay.ClientIDMutation):
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        Model = django.contrib.auth.get_user_model()
+        Model = UserModel
 
         try:
             uid = force_text(uid_decoder(input.get('id')))
@@ -154,21 +191,23 @@ class ResetPassword(relay.ClientIDMutation):
 
         return ResetPassword(ok=True, user=user)
 
+class UpdateUsernameMeta(type):
+    def __new__(mcs, classname, bases, dictionary):
+        for field in graph_auth_settings.USER_FIELDS:
+            dictionary[field] = graphene.String()
+        return type.__new__(mcs, classname, bases, dictionary)
+
 class UpdateUser(relay.ClientIDMutation):
-    class Input:
-        username = graphene.String()
-        email = graphene.String()
+    class Input(metaclass=UpdateUsernameMeta):
         password = graphene.String()
         current_password = graphene.String()
-        first_name = graphene.String()
-        last_name = graphene.String()
 
     ok = graphene.Boolean()
     result = graphene.Field(UserNode)
 
     @classmethod
     def mutate_and_get_payload(cls, input, context, info):
-        Model = django.contrib.auth.get_user_model()
+        Model = UserModel
         user = context.user
         user.is_current_user = True
 
@@ -197,7 +236,7 @@ class UpdateUser(relay.ClientIDMutation):
         return UpdateUser(ok=True, result=updated_user)
 
 class Query(AbstractType):
-    user = graphene.Field(UserNode)
+    user = relay.Node.Field(UserNode)
     users = DjangoFilterConnectionField(UserNode)
 
     me = graphene.Field(UserNode)

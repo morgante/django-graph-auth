@@ -23,7 +23,12 @@ except ImportError:
     from django.utils import importlib  # Will be removed in Django 1.9
 
 DEFAULTS = {
-    'USER_FIELDS': ('email', 'first_name', 'last_name', )
+    'USER_FIELDS': ('email', 'first_name', 'last_name', ),
+    'ONLY_ADMIN_REGISTRATION': False,
+    'WELCOME_EMAIL_TEMPLATE': None,
+    'EMAIL_FROM': None,
+    'CUSTOM_PASSWORD_RESET_TEMPLATE': None,
+    'PASSWORD_RESET_URL_TEMPLATE': None
 }
 
 # List of settings that may be in string import notation.
