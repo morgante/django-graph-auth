@@ -77,6 +77,7 @@ class RegisterUser(relay.ClientIDMutation):
 
         user = model.objects.create_user(username, email, password, **input)
         user.is_current_user = True
+        django.contrib.auth.login(context, user)
 
         if graph_auth_settings.WELCOME_EMAIL_TEMPLATE is not None and graph_auth_settings.EMAIL_FROM is not None:
             from mail_templated import EmailMessage
@@ -107,6 +108,7 @@ class LoginUser(relay.ClientIDMutation):
 
         if user:
             user.is_current_user = True
+            django.contrib.auth.login(context, user)
             return LoginUser(ok=True, user=user)
         else:
             return LoginUser(ok=False, user=None)
