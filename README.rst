@@ -61,7 +61,7 @@ Optional Settings
 .. code-block:: python
 
 	GRAPH_AUTH = {
-	    'USER_FIELDS': ('email', 'first_name', 'last_name', ), # Which username fields are available
+	    'USER_FIELDS': ('username', 'email', 'first_name', 'last_name', ), # Which user fields are available
 	    'ONLY_ADMIN_REGISTRATION': False, # Only alow admins to register new users
 	    'WELCOME_EMAIL_TEMPLATE': None, # Email template for optional welcome email, user object fields is in scope
 	    'EMAIL_FROM': None # Email from for welcome email
