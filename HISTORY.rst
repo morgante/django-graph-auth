@@ -5,6 +5,11 @@ Pending
 -------
 * New release notes go here.
 
+0.3.3 (2017-8-14)
+-----------------
+* Added username to default USER_FIELDS setting.
+* Handled case with empty context.
+
 0.3.2 (2017-2-8)
 -----------------
 * Added admin only registration option
