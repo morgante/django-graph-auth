@@ -107,9 +107,9 @@ class LoginUser(relay.ClientIDMutation):
 
         if user:
             user.is_current_user = True
-            return LoginUser(ok=True, user=user)
+            return cls(ok=True, user=user)
         else:
-            return LoginUser(ok=False, user=None)
+            return cls(ok=False, user=None)
 
 class ResetPasswordRequest(relay.ClientIDMutation):
     class Input:
