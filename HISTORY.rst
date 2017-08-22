@@ -5,10 +5,9 @@ Pending
 -------
 * New release notes go here.
 
-0.3.3 (2017-8-14)
+0.3.3 (2017-8-22)
 -----------------
-* Added username to default USER_FIELDS setting.
-* Handled case with empty context.
+* Handled case with empty context and empty user in context.
 
 0.3.2 (2017-2-8)
 -----------------
