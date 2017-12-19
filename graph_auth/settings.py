@@ -34,6 +34,7 @@ DEFAULTS = {
 # List of settings that may be in string import notation.
 IMPORT_STRINGS = ()
 
+
 def perform_import(val, setting_name):
     """
     If the given setting is a string import notation,
@@ -103,12 +104,15 @@ class GraphAuthSettings(object):
         setattr(self, attr, val)
         return val
 
+
 graph_auth_settings = GraphAuthSettings(None, DEFAULTS, IMPORT_STRINGS)
+
 
 def reload_graph_auth_settings(*args, **kwargs):
     global graph_auth_settings
     setting, value = kwargs['setting'], kwargs['value']
     if setting == 'GRAPH_AUTH':
         graph_auth_settings = GraphAuthSettings(value, DEFAULTS, IMPORT_STRINGS)
+
 
 setting_changed.connect(reload_graph_auth_settings)
