@@ -1,12 +1,8 @@
 from django.conf import settings
-from graphene import relay, AbstractType, Mutation, Node
-from graphql_relay.node.node import from_global_id
+from graphene import relay, AbstractType
 import graphene
 from graphene_django.filter import DjangoFilterConnectionField
 from graphene_django import DjangoObjectType
-import django_filters
-import logging
-from django.db import models
 from django.utils.http import urlsafe_base64_decode as uid_decoder
 from django.utils.encoding import force_text
 
@@ -64,7 +60,7 @@ class UserNode(DjangoObjectType):
 class RegisterUser(relay.ClientIDMutation):
     class Input(metaclass=DynamicUsernameMeta):
         email = graphene.String(required=True)
-        password = graphene.String()
+        password = graphene.String(required=True)
         first_name = graphene.String()
         last_name = graphene.String()
 
@@ -80,13 +76,12 @@ class RegisterUser(relay.ClientIDMutation):
         if 'clientMutationId' in input:
             input.pop('clientMutationId')
         email = input.pop('email')
-        username = input.pop(UserModel.USERNAME_FIELD, email)
         password = input.pop('password') if 'password' in input\
             else model.objects.make_random_password()
 
         if model.objects.filter(email=email):
             return RegisterUser(ok=False, user=None)
-        user = model.objects.create_user(username, email, password, **input)
+        user = model.objects.create_user(email, password, **input)
         user.is_current_user = True
 
         if graph_auth_settings.WELCOME_EMAIL_TEMPLATE is not None\
@@ -242,7 +237,8 @@ class UpdateUser(relay.ClientIDMutation):
             try:
                 current_password = input.pop('current_password')
             except KeyError:
-                raise Exception("Please provide your current password to change your password.")
+                raise Exception(
+                    "Please provide your current password to change your password.")
 
             if user.check_password(current_password):
                 user.set_password(input.pop('password'))
