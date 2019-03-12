@@ -5,6 +5,10 @@ Pending
 -------
 * New release notes go here.
 
+0.3.3 (2017-8-22)
+-----------------
+* Handled case with empty context and empty user in context.
+
 0.3.2 (2017-2-8)
 -----------------
 * Added admin only registration option
