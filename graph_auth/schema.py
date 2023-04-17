@@ -22,9 +22,9 @@ from django.utils.http import urlsafe_base64_encode
 UserModel = django.contrib.auth.get_user_model()
 
 class DynamicUsernameMeta(type):
-    def __new__(mcs, classname, bases, dictionary):
+    def __new__(cls, classname, bases, dictionary):
         dictionary[UserModel.USERNAME_FIELD] = graphene.String(required=True)
-        return type.__new__(mcs, classname, bases, dictionary)
+        return type.__new__(cls, classname, bases, dictionary)
 
 class UserNode(DjangoObjectType):
     class Meta:
@@ -50,9 +50,7 @@ class UserNode(DjangoObjectType):
         jwt_encode_handler = api_settings.JWT_ENCODE_HANDLER
 
         payload = jwt_payload_handler(self)
-        token = jwt_encode_handler(payload)
-
-        return token
+        return jwt_encode_handler(payload)
 
 class RegisterUser(relay.ClientIDMutation):
     class Input(metaclass=DynamicUsernameMeta):
@@ -103,13 +101,10 @@ class LoginUser(relay.ClientIDMutation):
             'password': input.get('password')
         }
 
-        user = django.contrib.auth.authenticate(**params)
-
-        if user:
-            user.is_current_user = True
-            return cls(ok=True, user=user)
-        else:
+        if not (user := django.contrib.auth.authenticate(**params)):
             return cls(ok=False, user=None)
+        user.is_current_user = True
+        return cls(ok=True, user=user)
 
 class ResetPasswordRequest(relay.ClientIDMutation):
     class Input:
@@ -192,10 +187,10 @@ class ResetPassword(relay.ClientIDMutation):
         return ResetPassword(ok=True, user=user)
 
 class UpdateUsernameMeta(type):
-    def __new__(mcs, classname, bases, dictionary):
+    def __new__(cls, classname, bases, dictionary):
         for field in graph_auth_settings.USER_FIELDS:
             dictionary[field] = graphene.String()
-        return type.__new__(mcs, classname, bases, dictionary)
+        return type.__new__(cls, classname, bases, dictionary)
 
 class UpdateUser(relay.ClientIDMutation):
     class Input(metaclass=UpdateUsernameMeta):
@@ -226,7 +221,7 @@ class UpdateUser(relay.ClientIDMutation):
                 raise Exception("Current password is incorrect.")
 
         for key, value in input.items():
-            if not key is 'current_password':
+            if key is not 'current_password':
                 setattr(user, key, value)
 
         user.save()
