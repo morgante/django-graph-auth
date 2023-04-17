@@ -59,7 +59,7 @@ def import_from_string(val, setting_name):
         module = importlib.import_module(module_path)
         return getattr(module, class_name)
     except (ImportError, AttributeError) as e:
-        msg = "Could not import '%s' for Graph Auth setting '%s'. %s: %s." % (val, setting_name, e.__class__.__name__, e)
+        msg = f"Could not import '{val}' for Graph Auth setting '{setting_name}'. {e.__class__.__name__}: {e}."
         raise ImportError(msg)
 
 
@@ -86,7 +86,7 @@ class GraphAuthSettings(object):
 
     def __getattr__(self, attr):
         if attr not in self.defaults:
-            raise AttributeError("Invalid Graph Auth setting: '%s'" % attr)
+            raise AttributeError(f"Invalid Graph Auth setting: '{attr}'")
 
         try:
             # Check if present in user settings
